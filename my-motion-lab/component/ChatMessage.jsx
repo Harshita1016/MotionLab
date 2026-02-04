@@ -5,7 +5,7 @@ export default function ChatMessage({ role, content, children }) {
 
   return (
     <div
-      className={`flex gap-3 p-4 rounded-xl ${
+      className={`flex gap-3 p-4 rounded-xl max-w-xs ${
         isUser ? "bg-primary/10 border border-primary/20" : "bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10"
       }`}
     >

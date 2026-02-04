@@ -50,15 +50,6 @@ export default function Home() {
         <Hero />
       </ScrollReveal>
 
-      {/* Demo - same page, below hero */}
-      <section id="demo" className="scroll-mt-24 py-16 md:py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <ScrollReveal>
-            <DemoSection />
-          </ScrollReveal>
-        </div>
-      </section>
-
       {/* Features */}
       <section id="features" className="scroll-mt-24 py-16 md:py-24 relative">
         <div className="max-w-7xl mx-auto px-6">
@@ -119,7 +110,7 @@ export default function Home() {
                 Try Demo
               </a>
               <Link
-                href="/signin"
+                href="/signup"
                 className="px-8 py-4 rounded-xl border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition"
               >
                 Get Started
