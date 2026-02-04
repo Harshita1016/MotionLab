@@ -12,10 +12,8 @@ export default function Footer() {
           </div>
           <div className="flex gap-8 text-base font-medium text-gray-700 dark:text-white">
             <Link href="/" className="hover:text-primary transition">Home</Link>
-            <Link href="/#features" className="hover:text-primary transition">Features</Link>
-            <Link href="/#ai-assistant" className="hover:text-primary transition">AI Assistant</Link>
             <Link href="/login" className="hover:text-primary transition">Login</Link>
-            <Link href="/signin" className="hover:text-primary transition">Sign Up</Link>
+            <Link href="/signup" className="hover:text-primary transition">Sign Up</Link>
           </div>
         </div>
         <p className="text-center md:text-left text-sm text-gray-600 dark:text-muted mt-8">

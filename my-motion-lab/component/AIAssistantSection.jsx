@@ -4,8 +4,12 @@ import ChatMessage from "@/component/ChatMessage"
 import CodeBlock from "@/component/codeBlock"
 import Tabs from "@/component/Tabs"
 import Link from "next/link"
-import { useState } from "react"
-import { Sparkles, Zap, BookOpen, MousePointer } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { fetchGeminiResponse } from "@/lib/geminiClient"
+import { getChatHistory, saveChatMessage, saveAnimation } from "@/lib/db-client"
+import { Sparkles, Zap, BookOpen, MousePointer, Save } from "lucide-react"
+
+// ... (existing example constants remain unchanged) ...
 
 const exampleResponse = `@keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
@@ -31,60 +35,159 @@ export default function AIAssistantSection() {
     },
   ])
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (!input.trim()) return
+  const [loading, setLoading] = useState(false);
+  const chatContainerRef = useRef(null);
 
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: input.trim() },
-      {
-        role: "assistant",
-        content: "Here's a simple CSS fade-in you can use:",
-        code: exampleResponse,
-      },
-    ])
-    setInput("")
-  }
+  // Load History on Mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      const history = await getChatHistory();
+      if (history && history.length > 0) {
+        // Map DB format to UI format
+        const formattedHistory = history.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          code: msg.code_snippet // Ensure DB field name matches
+        }));
+        setMessages(formattedHistory);
+      }
+    }
+    loadHistory();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const userContent = input.trim();
+    const userMsg = { role: "user", content: userContent };
+
+    // Optimistic UI update
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setLoading(true);
+
+    // Save User Message to DB
+    saveChatMessage("user", userContent);
+
+    try {
+      const aiText = await fetchGeminiResponse(userContent);
+      // Try to extract code block if present
+      const codeMatch = aiText.match(/```(?:css)?([\s\S]*?)```/);
+
+      const aiMsg = codeMatch
+        ? { role: "assistant", content: aiText.replace(/```(?:css)?([\s\S]*?)```/, "").trim(), code: codeMatch[1].trim() }
+        : { role: "assistant", content: aiText };
+
+      setMessages((prev) => [...prev, aiMsg]);
+
+      // Save Assistant Message to DB
+      saveChatMessage("assistant", aiMsg.content, aiMsg.code || null);
+
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, I couldn't fetch a response from Gemini API." },
+      ]);
+    }
+    setLoading(false);
+  };
+
+  const handleSaveAnimation = async (code) => {
+    const title = `Animation ${new Date().toLocaleString()}`;
+    const result = await saveAnimation(title, code);
+    if (result.success) {
+      alert("Animation saved to your library!");
+    } else {
+      alert("Failed to save: " + result.error);
+    }
+  };
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const chatPanel = (
-    <div className="space-y-4">
-      {messages.map((msg, i) => (
-        <div
-          key={i}
-          className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-        >
-          <ChatMessage role={msg.role} content={msg.content}>
-            {msg.code && (
-              <div className="mt-3">
-                <CodeBlock code={msg.code} language="css" />
+    <div className="rounded-2xl bg-card border-2 border-primary/30 p-4 flex flex-col h-[400px] max-h-[60vh] shadow-xl shadow-primary/5">
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide"
+        style={{ minHeight: 0 }}
+      >
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div className={`max-w-[85%] ${msg.role === "user" ? "" : "w-full"}`}>
+              {msg.role === "user" ? (
+                <ChatMessage role={msg.role} content={msg.content} />
+              ) : (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-1">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-none p-4 text-gray-200 leading-relaxed">
+                      {msg.content}
+                    </div>
+                    {msg.code && (
+                      <div className="mt-2 relative group">
+                        <CodeBlock code={msg.code} language="css" />
+                        <button
+                          onClick={() => handleSaveAnimation(msg.code)}
+                          className="absolute top-2 right-2 p-2 rounded-lg bg-white/10 hover:bg-primary text-white transition opacity-0 group-hover:opacity-100 flex items-center gap-2 text-xs"
+                          title="Save to Library"
+                        >
+                          <Save className="w-3 h-3" />
+                          Save
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-1">
+                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
               </div>
-            )}
-          </ChatMessage>
-        </div>
-      ))}
-
-      <form onSubmit={handleSubmit} className="pt-4">
+              <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-none p-4 text-gray-400 italic">
+                Thinking...
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <form onSubmit={handleSubmit} className="pt-4 mt-2 border-t border-white/10">
         <div className="flex gap-3">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask for an animation..."
-            className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-muted focus:outline-none focus:border-primary shadow-sm"
+            className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
             aria-label="Type your animation request"
+            disabled={loading}
           />
           <button
             type="submit"
-            className="px-6 py-3 rounded-xl bg-primary text-white font-medium hover:opacity-90 transition shadow-sm"
+            className="px-6 py-3 rounded-xl bg-primary text-white font-medium hover:opacity-90 transition shadow-lg shadow-primary/20"
             aria-label="Send message"
+            disabled={loading}
           >
-            Send
+            {loading ? "..." : "Send"}
           </button>
         </div>
       </form>
     </div>
-  )
+  );
 
   const examplesPanel = (
     <div className="rounded-2xl bg-card border border-white/10 p-6">

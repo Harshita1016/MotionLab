@@ -23,25 +23,33 @@ export default function LoginPage() {
 
     const supabase = getSupabaseClient()
     if (!supabase) {
-      setMessage("Supabase env vars missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.")
+      setMessage("Supabase client failed to initialize. Check environment variables.")
       setIsError(true)
       setLoading(false)
       return
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      setMessage(error.message)
+      if (error) {
+        setMessage(error.message)
+        setIsError(true)
+        setLoading(false)
+      } else {
+        setMessage("Logged in successfully!")
+        setIsError(false)
+        router.refresh() // Refresh to update server components if any
+        router.push("/")
+      }
+    } catch (err) {
+      console.error(err)
+      setMessage("An unexpected error occurred.")
       setIsError(true)
       setLoading(false)
-    } else {
-      setMessage("Logged in successfully!")
-      setIsError(false)
-      router.push("/features")
     }
   }
 
@@ -50,11 +58,10 @@ export default function LoginPage() {
       <form onSubmit={handleLogin} className="flex flex-col">
         {message && (
           <div
-            className={`w-full mb-4 px-4 py-3 rounded-xl text-sm ${
-              isError
-                ? "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400"
-                : "bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400"
-            }`}
+            className={`w-full mb-4 px-4 py-3 rounded-xl text-sm ${isError
+              ? "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400"
+              : "bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400"
+              }`}
           >
             {message}
           </div>

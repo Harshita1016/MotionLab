@@ -2,9 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
-import { Sun, Moon, LogIn, UserPlus } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Sun, Moon, LogIn, UserPlus, LogOut } from "lucide-react"
 import { useTheme } from "@/component/ThemeProvider"
+import { getSupabaseClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 
 // Remove Demo from SECTIONS for clarity
 const SECTIONS = [
@@ -17,6 +19,36 @@ export default function Navbar() {
   const pathname = usePathname()
   const { theme, toggleTheme } = useTheme()
   const isHome = pathname === "/"
+  const [user, setUser] = useState(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    const supabase = getSupabaseClient()
+    if (!supabase) return
+
+    // Initial check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+    })
+
+    // Listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleLogout = async () => {
+    const supabase = getSupabaseClient()
+    if (supabase) {
+      await supabase.auth.signOut()
+      setUser(null)
+      router.refresh()
+      // Force reload to update page content state
+      window.location.reload()
+    }
+  }
 
   const scrollToSection = (e, id) => {
     if (isHome) {
@@ -33,13 +65,19 @@ export default function Navbar() {
         <nav className="w-full px-6 py-3 flex items-center justify-between gap-4">
           <Link
             href="/"
+            onClick={(e) => {
+              if (pathname === "/") {
+                e.preventDefault()
+                window.scrollTo({ top: 0, behavior: "smooth" })
+              }
+            }}
             className="text-xl font-semibold text-gray-900 dark:text-white hover:opacity-90 transition shrink-0"
             aria-label="MotionLab Home"
           >
             Motion<span className="text-primary">Lab</span>
           </Link>
           <div className="hidden md:flex items-center gap-8 flex-1 justify-center">
-            {SECTIONS.map(({ id, label }) => (
+            {user && SECTIONS.map(({ id, label }) => (
               <Link
                 key={id}
                 href={isHome ? `#${id}` : `/#${id}`}
@@ -59,20 +97,34 @@ export default function Navbar() {
             >
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-            <Link
-              href="/login"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium text-gray-700 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 hover:text-primary transition"
-            >
-              <LogIn className="w-4 h-4" />
-              Log in
-            </Link>
-            <Link
-              href="/signin"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium text-gray-700 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 hover:text-primary transition"
-            >
-              <UserPlus className="w-4 h-4" />
-              Sign up
-            </Link>
+
+            {user ? (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium text-gray-700 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 hover:text-red-400 transition"
+              >
+                <LogOut className="w-4 h-4" />
+                Log out
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium text-gray-700 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 hover:text-primary transition"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Log in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium text-gray-700 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 hover:text-primary transition"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Sign up
+                </Link>
+              </>
+            )}
+
           </div>
 
           {/* Mobile menu button */}

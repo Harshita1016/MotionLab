@@ -18,7 +18,7 @@ export default function Hero() {
 
       <div className="max-w-7xl mx-auto px-6 relative">
         {/* Main Content */}
-        <div className="flex flex-col lg:flex-row lg:items-stretch gap-8">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-8">
           {/* LEFT COLUMN */}
           <div className="flex-1 flex flex-col justify-center lg:pr-8">
             <div className="mb-4">
@@ -26,15 +26,15 @@ export default function Hero() {
                 ✨ AI-Powered Animation Playground
               </span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-white max-w-4xl leading-tight mb-6 lg:mb-0 lg:mt-2">
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 dark:text-white max-w-4xl leading-normal mb-6 lg:mb-20 lg:mt-250">
               Create stunning animations with{" "}
               <span className="text-primary">AI-powered</span> motion tools
             </h1>
-            <p className="text-lg md:text-xl text-gray-600 dark:text-muted max-w-2xl mb-8 lg:mb-0">
+            <p className="text-lg md:text-xl text-gray-600 dark:text-muted max-w-4xl mb-20 lg:mb-15">
               Design, preview, and export beautiful animations for your web
               projects using simple controls and AI assistance.
             </p>
-            <div className="flex flex-wrap items-center gap-8 md:gap-12 mb-8 lg:mb-0 lg:justify-start">
+            <div className="flex flex-wrap items-center gap-8 md:gap-12 mb-8 lg:mb-15 lg:justify-start">
               <div className="text-center">
                 <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                   10K+
